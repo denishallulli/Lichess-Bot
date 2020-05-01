@@ -1,4 +1,4 @@
-import sys, re, time, pyautogui, chess, chess.engine, random as rand
+import sys, re, time, pyautogui, chess, chess.engine, chess.polyglot, random as rand
 import selenium.webdriver as driver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
@@ -8,7 +8,6 @@ from selenium.webdriver.common.keys import Keys
 browser = driver.Chrome()
 link = "https://lichess.org/login?referrer=/"
 browser.get(link)
-
 
 class Bot:
 
@@ -72,15 +71,22 @@ class Bot:
         finally:
             return True
 
-    def  __move_piece(self, engine, side):
+    def  __move_piece(self, engine, book, side):
         if len(self.moves_game) != 0:
             self.board.push_san(self.moves_game[-1])
-        engine_move = engine.play(self.board, chess.engine.Limit(time=0.1))
         
-        self.board.push(engine_move.move)
+        if sum(1 for _ in book.find_all(self.board)) != 0:
+            for entry in book.find_all(self.board):
+                next_move = entry.move  
+                break
+        else:
+            engine_move = engine.play(self.board, chess.engine.Limit(time=0.1))
+            next_move = engine_move.move
 
-        start_click = str(engine_move.move)[0:2]
-        end_click = str(engine_move.move)[2:4]
+        self.board.push(next_move)
+
+        start_click = str(next_move)[0:2]
+        end_click = str(next_move)[2:4]
 
         if side == 'white':
             start_pos = self.pos_w[start_click]
@@ -112,13 +118,13 @@ class Bot:
         browser.find_element_by_xpath('//*[@id="form3-password"]').send_keys(passwrd)
         browser.find_element_by_xpath('//*[@id="form3-password"]').send_keys(Keys.ENTER)
 
-    def play_move(self, engine, side):
+    def play_move(self, engine, book, side):
 
         if side == 'black':
             self.__moves_history()
             if len(self.moves_game)%2 != 0 and len(self.moves_game) > self.cache:
                 self.cache = len(self.moves_game)
-                self.__move_piece(engine, side)
+                self.__move_piece(engine, book, side)
 
         elif side == 'white':
             if not self.black_entered_match[-1]:
@@ -126,16 +132,16 @@ class Bot:
                     
             if len(self.moves_game)%2 == 0 and self.black_entered_match and len(self.moves_game) > self.cache:
                 self.cache = len(self.moves_game)
-                self.__move_piece(engine, side)
+                self.__move_piece(engine, book, side)
             self.__moves_history()
-
-
 
 def main():
     
-    login_info = open('credentials.txt', 'r')
+    #login_info = open('credentials.txt', 'r')
     logged_in = False 
     engine = chess.engine.SimpleEngine.popen_uci("engine")
+    book = chess.polyglot.open_reader("lichess_bot.bin")
+    engine.configure({"UCI_Elo": "2000", "Hash": "64"})
 
     while True:
 
@@ -156,7 +162,7 @@ def main():
                     if not side == 'NULL':
                         searching_side = False
                 if side == 'black' or side == 'white':
-                    Lela.play_move(engine, side)
+                    Lela.play_move(engine, book, side)
 
 if __name__ == "__main__":
     main()
