@@ -18,6 +18,7 @@ class Bot:
         self.cache = -1 
         self.elapsed_time = 0
         self.attackers = [0]
+        self.instant_moves = rand.randint(3,6)
         self.thought_about_mate = False
         self.pos_w = self.__create_dic('w')
         self.pos_b = self.__create_dic('b')
@@ -124,7 +125,7 @@ class Bot:
         quick_moves = [rand.randint(9,35) for _ in range(5)]
         recapture, Qblunder, n_attacks = self.__move_type(side, move_pos, n_moves)
 
-        if  n_moves < 6 or recapture or Qblunder or self.elapsed_time > 50 or (n_moves in quick_moves) or self.thought_about_mate:
+        if  n_moves < self.instant_moves or recapture or Qblunder or self.elapsed_time >= 50 or (n_moves in quick_moves) or self.thought_about_mate:
             return 0
         elif num_until_mate < 7:
             if num_until_mate < 3:
@@ -133,7 +134,14 @@ class Bot:
                 self.thought_about_mate = True
                 return num_until_mate + (num_until_mate - rand.randint(2,4))**2/3-3
         else:
-            return rand.uniform(0.1,0.3) + 0.3*n_attacks + math.exp((abs(score_change)-7)*(9-abs(score_change))/10)*rand.uniform(4,6)
+            thinking_time = rand.uniform(0.1,0.3) + 0.3*n_attacks + math.exp((abs(score_change)-7)*(9-abs(score_change))/10)*rand.uniform(4,6)
+
+            if thinking_time + self.elapsed_time > 51:
+                return 51 - self.elapsed_time
+            elif self.elapsed_time > 45:
+                return rand.uniform(0.1,0.3) + 0.3*n_attacks + math.exp((abs(score_change)-7)*(9-abs(score_change))/10)*rand.uniform(1,3)
+            else:
+                return thinking_time
 
     def  __move_piece(self, engine, book, side):
 
@@ -225,7 +233,7 @@ def main():
     logged_in = False 
     engine = chess.engine.SimpleEngine.popen_uci("engine")
     book = chess.polyglot.open_reader("lichess_bot.bin")
-    engine.configure({"UCI_Elo": "1700", "Hash": "64"})
+    engine.configure({"UCI_Elo": "1900", "Hash": "64"})
 
     while True:
 
