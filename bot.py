@@ -90,7 +90,14 @@ class Bot:
                     num_attackers += len(self.board.attackers(chess.BLACK, piece_pos))
         
         self.attackers.append(num_attackers)
+    
+    def __square_to_index(self, square):
         
+        dic = {'a': 0, 'b': 1, 'c': 2, 'd': 3, 'e': 4, 'f': 5, 'g': 6, 'h': 7 }
+        row = int(square[1]) - 1
+        col = int(dic[square[0]])
+
+        return col + 8*row
     
     def __move_type(self, side, move_pos, num_moves):
         if num_moves > 1:
@@ -125,7 +132,7 @@ class Bot:
         quick_moves = [rand.randint(9,35) for _ in range(5)]
         recapture, Qblunder, n_attacks = self.__move_type(side, move_pos, n_moves)
 
-        if  n_moves < self.instant_moves or recapture or Qblunder or self.elapsed_time >= 50 or (n_moves in quick_moves) or self.thought_about_mate or promotion:
+        if  n_moves < self.instant_moves or recapture or Qblunder or self.elapsed_time >= 50 or (n_moves in quick_moves) or self.thought_about_mate or promotion or (self.moves_game[-2][-1] == '+' and self.board.piece_at(self.__square_to_index(move_pos))):
             return 0
         elif num_until_mate < 7:
             if num_until_mate < 3:
