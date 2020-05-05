@@ -58,14 +58,14 @@ class Bot:
                 j = 0
                 for letter in ('h', 'g', 'f', 'e', 'd', 'c', 'b', 'a'):
                     tile = letter + str(i)
-                    dic[tile] = (382 + j*63, 618 - (8-i)*63)
+                    dic[tile] = (382 + j*61, 618 - (8-i)*61)
                     j += 1
         else:
             for i in range(8):
                 j = 0
                 for letter in ('a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'):
                     tile = letter + str(i+1)
-                    dic[tile] = (382 + j*63, 618 - i*63)
+                    dic[tile] = (382 + j*61, 618 - i*61)
                     j += 1
         return dic
 
@@ -115,7 +115,7 @@ class Bot:
         else:
             return False, False, False
     
-    def __wait_time(self, side, score_change, num_until_mate, move_pos):
+    def __wait_time(self, side, score_change, num_until_mate, move_pos, promotion):
 
         if side == 'black':
             n_moves = self.board.fullmove_number - 1
@@ -125,7 +125,7 @@ class Bot:
         quick_moves = [rand.randint(9,35) for _ in range(5)]
         recapture, Qblunder, n_attacks = self.__move_type(side, move_pos, n_moves)
 
-        if  n_moves < self.instant_moves or recapture or Qblunder or self.elapsed_time >= 50 or (n_moves in quick_moves) or self.thought_about_mate:
+        if  n_moves < self.instant_moves or recapture or Qblunder or self.elapsed_time >= 50 or (n_moves in quick_moves) or self.thought_about_mate or promotion:
             return 0
         elif num_until_mate < 7:
             if num_until_mate < 3:
@@ -147,6 +147,7 @@ class Bot:
 
         score_change = 0
         moves_mate =  math.inf
+        promote_to_Q = False
 
         if len(self.moves_game) != 0:
             self.board.push_san(self.moves_game[-1])
@@ -162,11 +163,14 @@ class Bot:
                 engine_move = engine.play(self.board, chess.engine.Limit(time=0.1))
                 next_move = engine_move.move
                 self.board.push(next_move)
-                score_after = engine.analyse(self.board, chess.engine.Limit(time=0.2))
-                if str(score_after["score"])[0] == '#':
-                    moves_mate = int(str(score_after["score"])[2:])
-                else:
-                    score_change = (int(str(score_after["score"])) - int(str(score_prior["score"])))/100
+                if len(str(next_move)) == 5 and str(next_move)[-1] == 'q':
+                    promote_to_Q = True
+                if not promote_to_Q:
+                    score_after = engine.analyse(self.board, chess.engine.Limit(time=0.2))
+                    if str(score_after["score"])[0] == '#':
+                        moves_mate = int(str(score_after["score"])[2:])
+                    else:
+                        score_change = (int(str(score_after["score"])) - int(str(score_prior["score"])))/100
             else:
                 engine_move = engine.play(self.board, chess.engine.Limit(time=0.1))
                 next_move = engine_move.move
@@ -182,9 +186,11 @@ class Bot:
             start_pos = self.pos_b[start_click]
             end_pos = self.pos_b[end_click]
 
-        time.sleep(self.__wait_time(side, score_change, moves_mate, end_click))
+        time.sleep(self.__wait_time(side, score_change, moves_mate, end_click, promote_to_Q))
         pyautogui.click(start_pos[0], start_pos[1])
         pyautogui.click(end_pos[0], end_pos[1])
+        if promote_to_Q:
+            pyautogui.click(end_pos[0], end_pos[1])
 
     def is_match_over(self):
         return (len(browser.find_elements_by_xpath('//*[@id="main-wrap"]/main/div[1]/div[5]/div[2]/div[@class="result-wrap"]')) != 0)
